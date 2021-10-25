@@ -42,6 +42,8 @@ var generalWaitInterval = 5 * time.Second
 
 // Installer will run the install operations on the node
 type Installer interface {
+	// FormatDisks formats all disks that have been configured to be formatted
+	FormatDisks() error
 	InstallNode() error
 	UpdateHostInstallProgress(newStage models.HostStage, info string)
 }
@@ -63,6 +65,12 @@ func NewAssistedInstaller(log *logrus.Logger, cfg config.Config, ops ops.Ops, ic
 		inventoryClient: ic,
 		kcBuilder:       kcb,
 		ign:             ign,
+	}
+}
+
+func (i *installer) FormatDisks() error {
+	for _, diskToFormat := range i.Config.DisksToFormat {
+		i.ops.FormatDisk(diskToFormat)
 	}
 }
 

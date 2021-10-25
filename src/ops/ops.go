@@ -48,6 +48,7 @@ type Ops interface {
 	CreateRandomHostname(hostname string) error
 	GetHostname() (string, error)
 	EvaluateDiskSymlink(string) string
+	FormatDisk(string) error
 	CreateManifests(string, []byte) error
 }
 
@@ -203,6 +204,16 @@ func (o *ops) EvaluateDiskSymlink(device string) string {
 		device = linkTarget
 	}
 	return device
+}
+
+func (o *ops) FormatDisk(disk string) error {
+	o.log.Infof("Formatting disk %s", disk)
+	_, err := o.ExecPrivilegeCommand(o.logWriter, "dd", "if=/dev/zero", fmt.Sprintf("of=%s", disk), "bs=512", "count=1")
+	if err != nil {
+		o.log.Errorf("Failed to format disk %s, err: %s", disk, err)
+		return err
+	}
+	return nil
 }
 
 func installerArgs(ignitionPath string, device string, extra []string) []string {
