@@ -18,6 +18,7 @@ import (
 
 func main() {
 	config.ProcessArgs()
+	config.ProcessDryRunArgs()
 	logger := utils.InitLogger(config.GlobalConfig.Verbose, true)
 	config.GlobalConfig.PullSecretToken = os.Getenv("PULL_SECRET_TOKEN")
 	if config.GlobalConfig.PullSecretToken == "" {
@@ -38,6 +39,10 @@ func main() {
 		k8s_client.NewK8SClient,
 		ignition.NewIgnition(),
 	)
+
+	// Try to format requested disks. May fail formatting some disks, this is not an error.
+	ai.FormatDisks()
+
 	if err := ai.InstallNode(); err != nil {
 		ai.UpdateHostInstallProgress(models.HostStageFailed, err.Error())
 		os.Exit(1)
