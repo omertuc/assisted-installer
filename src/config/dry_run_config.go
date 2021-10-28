@@ -11,12 +11,26 @@ import (
 // DryRunConfig defines configuration of the agent's dry-run mode
 type DryRunConfig struct {
 	DryRunEnabled bool `envconfig:"DRY_ENABLE"`
+	FakeRebootMarkerPath string `envconfig:"DRY_FAKE_REBOOT_MARKER_PATH"`
 }
 
 var GlobalDryRunConfig DryRunConfig
 
 var DefaultDryRunConfig DryRunConfig = DryRunConfig{
 	DryRunEnabled: false,
+}
+
+func touch(filePath string) error {
+	file, err := os.Create(filePath)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	return nil
+}
+
+func DryReboot() error {
+	return touch(GlobalDryRunConfig.FakeRebootMarkerPath)
 }
 
 func ProcessDryRunArgs() {
