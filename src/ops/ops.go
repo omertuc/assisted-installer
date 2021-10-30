@@ -110,6 +110,7 @@ func (o *ops) ExecPrivilegeCommand(liveLogger io.Writer, command string, args ..
 		"--mount",
 		// TODO: Document why we need the IPC namespace
 		"--ipc",
+		"--pid",
 		"--",
 		command,
 	}
@@ -537,7 +538,7 @@ func (o *ops) GetMCSLogs() (string, error) {
 // if needed
 func (o *ops) UploadInstallationLogs(isBootstrap bool) (string, error) {
 	command := "podman"
-	args := []string{"run", "--rm", "--privileged", "--net=host", "--pid=host", "-v", "/run/systemd/journal/socket:/run/systemd/journal/socket",
+	args := []string{"run", "--cgroups=disabled", "--rm", "--privileged", "--net=host", "--pid=host", "-v", "/run/systemd/journal/socket:/run/systemd/journal/socket",
 		"-v", "/var/log:/var/log", config.GlobalConfig.AgentImage, "logs_sender",
 		"-cluster-id", config.GlobalConfig.ClusterID, "-url", config.GlobalConfig.URL,
 		"-host-id", config.GlobalConfig.HostID, "-infra-env-id", config.GlobalConfig.InfraEnvID,
