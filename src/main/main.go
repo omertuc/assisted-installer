@@ -19,13 +19,14 @@ import (
 func main() {
 	config.ProcessArgs()
 	config.ProcessDryRunArgs()
-	logger := utils.InitLogger(config.GlobalConfig.Verbose, true)
+	logger := utils.InitLogger(config.GlobalConfig.Verbose, true, config.GlobalDryRunConfig.ForcedHostID)
 	config.GlobalConfig.PullSecretToken = os.Getenv("PULL_SECRET_TOKEN")
 	if config.GlobalConfig.PullSecretToken == "" {
 		logger.Warnf("Agent Authentication Token not set")
 	}
 
 	logger.Infof("Assisted installer started. Configuration is:\n %s", secretdump.DumpSecretStruct(config.GlobalConfig))
+	logger.Infof("Dry configuration is:\n %s", secretdump.DumpSecretStruct(config.GlobalDryRunConfig))
 	client, err := inventory_client.CreateInventoryClient(config.GlobalConfig.ClusterID, config.GlobalConfig.URL,
 		config.GlobalConfig.PullSecretToken, config.GlobalConfig.SkipCertVerification, config.GlobalConfig.CACertPath, logger, http.ProxyFromEnvironment)
 	if err != nil {
