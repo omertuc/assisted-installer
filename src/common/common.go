@@ -2,6 +2,7 @@ package common
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"regexp"
@@ -33,7 +34,7 @@ func GetHostsInStatus(hosts map[string]inventory_client.HostData, status []strin
 	return hostsbystatus
 }
 
-func SetConfiguringStatusForHosts(client inventory_client.InventoryClient, inventoryHostsMapWithIp map[string]inventory_client.HostData,
+func SetConfiguringStatusForHosts(ctx context.Context, client inventory_client.InventoryClient, inventoryHostsMapWithIp map[string]inventory_client.HostData,
 	mcsLogs string, fromBootstrap bool, log *logrus.Logger) {
 	notValidStates := map[models.HostStage]struct{}{models.HostStageConfiguring: {}, models.HostStageJoined: {}, models.HostStageDone: {}}
 	if fromBootstrap {
@@ -56,7 +57,7 @@ func SetConfiguringStatusForHosts(client inventory_client.InventoryClient, inven
 			if fromBootstrap && host.Host.Role == models.HostRoleWorker {
 				status = models.HostStageWaitingForIgnition
 			}
-			ctx := utils.GenerateRequestContext()
+			ctx := utils.GenerateRequestContextFromContext(ctx)
 			requestLog := utils.RequestIDLogger(ctx, log)
 			requestLog.Infof("Host %s %q found in mcs logs, moving it to %s state", hostName, host.Host.ID.String(), status)
 			if err := client.UpdateHostInstallProgress(ctx, host.Host.InfraEnvID.String(), host.Host.ID.String(), status, ""); err != nil {

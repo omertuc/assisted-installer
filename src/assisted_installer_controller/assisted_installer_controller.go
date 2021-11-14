@@ -191,7 +191,7 @@ func (c *controller) WaitAndUpdateNodesStatus(ctx context.Context, wg *sync.Wait
 	_ = utils.WaitForPredicateWithContext(ctx, LongWaitTimeout, GeneralWaitInterval, c.waitAndUpdateNodesStatus)
 }
 
-func (c *controller) waitAndUpdateNodesStatus() bool {
+func (c *controller) waitAndUpdateNodesStatus(ctx context.Context) bool {
 	ignoreStatuses := []string{models.HostStatusDisabled}
 	var hostsInError int
 	ctxReq := utils.GenerateRequestContext()
@@ -252,7 +252,7 @@ func (c *controller) waitAndUpdateNodesStatus() bool {
 			}
 		}
 	}
-	c.updateConfiguringStatusIfNeeded(assistedNodesMap)
+	c.updateConfiguringStatusIfNeeded(ctx, assistedNodesMap)
 	return KeepWaiting
 }
 
@@ -346,12 +346,12 @@ func (c *controller) getMCSLogs() (string, error) {
 	return logs, nil
 }
 
-func (c *controller) updateConfiguringStatusIfNeeded(hosts map[string]inventory_client.HostData) {
+func (c *controller) updateConfiguringStatusIfNeeded(ctx context.Context, hosts map[string]inventory_client.HostData) {
 	logs, err := c.getMCSLogs()
 	if err != nil {
 		return
 	}
-	common.SetConfiguringStatusForHosts(c.ic, hosts, logs, false, c.log)
+	common.SetConfiguringStatusForHosts(ctx, c.ic, hosts, logs, false, c.log)
 }
 
 func (c *controller) ApproveCsrs(ctx context.Context) {
@@ -397,11 +397,11 @@ func (c controller) PostInstallConfigs(ctx context.Context, wg *sync.WaitGroup) 
 		c.log.Infof("Finished PostInstallConfigs")
 		wg.Done()
 	}()
-	err := utils.WaitForPredicateWithContext(ctx, LongWaitTimeout, GeneralWaitInterval, func() bool {
-		ctxReq := utils.GenerateRequestContext()
+	err := utils.WaitForPredicateWithContext(ctx, LongWaitTimeout, GeneralWaitInterval, func(ctx context.Context) bool {
+		ctx = utils.GenerateRequestContextFromContext(ctx)
 		cluster, err := c.ic.GetCluster(ctx)
 		if err != nil {
-			utils.RequestIDLogger(ctxReq, c.log).WithError(err).Errorf("Failed to get cluster %s from assisted-service", c.ClusterID)
+			utils.RequestIDLogger(ctx, c.log).WithError(err).Errorf("Failed to get cluster %s from assisted-service", c.ClusterID)
 			return false
 		}
 		return *cluster.Status == models.ClusterStatusFinalizing
@@ -611,7 +611,7 @@ func (c controller) UpdateBMHs(ctx context.Context, wg *sync.WaitGroup) {
 		c.log.Infof("Finished UpdateBMHs")
 		wg.Done()
 	}()
-	_ = utils.WaitForPredicateWithContext(ctx, time.Duration(1<<63-1), GeneralWaitInterval, func() bool {
+	_ = utils.WaitForPredicateWithContext(ctx, time.Duration(1<<63-1), GeneralWaitInterval, func(ctx context.Context) bool {
 		bmhs, err := c.kc.ListBMHs()
 		if err != nil {
 			c.log.WithError(err).Errorf("Failed to list BMH hosts")
@@ -822,7 +822,7 @@ func (c controller) updateBMHs(bmhList *metal3v1alpha1.BareMetalHostList, machin
 	return allUpdated
 }
 
-func (c controller) unpatchEtcd() bool {
+func (c controller) unpatchEtcd(ctx context.Context) bool {
 	c.log.Infof("Unpatching etcd")
 	if err := c.kc.UnPatchEtcd(); err != nil {
 		c.log.Error(err)
@@ -832,8 +832,8 @@ func (c controller) unpatchEtcd() bool {
 }
 
 // AddRouterCAToClusterCA adds router CA to cluster CA in kubeconfig
-func (c controller) addRouterCAToClusterCA() bool {
-	ctx := utils.GenerateRequestContext()
+func (c controller) addRouterCAToClusterCA(ctx context.Context) bool {
+	ctx = utils.GenerateRequestContextFromContext(ctx)
 	log := utils.RequestIDLogger(ctx, c.log)
 	log.Infof("Start adding ingress ca to cluster")
 	caConfigMap, err := c.kc.GetConfigMap(ingressConfigMapNamespace, ingressConfigMapName)
@@ -910,7 +910,7 @@ func (c controller) waitForCSV(ctx context.Context, waitTimeout time.Duration) e
 		handlers[operators[index].Name] = NewClusterServiceVersionHandler(c.kc, operators[index], c.Status)
 	}
 
-	areOLMOperatorsAvailable := func() bool {
+	areOLMOperatorsAvailable := func(ctx context.Context) bool {
 		if len(handlers) == 0 {
 			return true
 		}
@@ -949,10 +949,10 @@ func (c controller) waitingForClusterOperators(ctx context.Context) error {
 
 func (c controller) sendCompleteInstallation(ctx context.Context, isSuccess bool, errorInfo string) {
 	c.log.Infof("Start complete installation step, with params success: %t, error info: %s", isSuccess, errorInfo)
-	_ = utils.WaitForPredicateWithContext(ctx, CompleteTimeout, GeneralProgressUpdateInt, func() bool {
-		ctxReq := utils.GenerateRequestContext()
-		if err := c.ic.CompleteInstallation(ctxReq, c.ClusterID, isSuccess, errorInfo); err != nil {
-			utils.RequestIDLogger(ctxReq, c.log).Error(err)
+	_ = utils.WaitForPredicateWithContext(ctx, CompleteTimeout, GeneralProgressUpdateInt, func(ctx context.Context) bool {
+		ctx = utils.GenerateRequestContextFromContext(ctx)
+		if err := c.ic.CompleteInstallation(ctx, c.ClusterID, isSuccess, errorInfo); err != nil {
+			utils.RequestIDLogger(ctx, c.log).Error(err)
 			return false
 		}
 		return true

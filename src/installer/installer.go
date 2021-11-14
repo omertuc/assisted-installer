@@ -707,13 +707,13 @@ func (i *installer) cleanupInstallDevice() error {
 	return i.ops.RemovePV(i.Device)
 }
 
-func (i *installer) verifyHostCanMoveToConfigurationStatus(inventoryHostsMapWithIp map[string]inventory_client.HostData) {
+func (i *installer) verifyHostCanMoveToConfigurationStatus(ctx context.Context, inventoryHostsMapWithIp map[string]inventory_client.HostData) {
 	logs, err := i.ops.GetMCSLogs()
 	if err != nil {
 		i.log.Infof("Failed to get MCS logs, will retry")
 		return
 	}
-	common.SetConfiguringStatusForHosts(i.inventoryClient, inventoryHostsMapWithIp, logs, true, i.log)
+	common.SetConfiguringStatusForHosts(ctx, i.inventoryClient, inventoryHostsMapWithIp, logs, true, i.log)
 }
 
 func (i *installer) filterAlreadyUpdatedHosts(inventoryHostsMapWithIp map[string]inventory_client.HostData) {
@@ -747,7 +747,7 @@ func (i *installer) updateConfiguringStatus(ctx context.Context) {
 			if err != nil {
 				continue
 			}
-			i.verifyHostCanMoveToConfigurationStatus(inventoryHostsMapWithIp)
+			i.verifyHostCanMoveToConfigurationStatus(ctx, inventoryHostsMapWithIp)
 			i.filterAlreadyUpdatedHosts(inventoryHostsMapWithIp)
 			if len(inventoryHostsMapWithIp) == 0 {
 				i.log.Infof("Exiting updateConfiguringStatus go routine")

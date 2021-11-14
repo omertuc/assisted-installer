@@ -219,12 +219,14 @@ func WaitForPredicateWithTimer(ctx context.Context, timeout time.Duration, inter
 }
 
 func WaitForPredicate(timeout time.Duration, interval time.Duration, predicate func() bool) error {
-	return WaitForPredicateWithContext(context.TODO(), timeout, interval, predicate)
+	return WaitForPredicateWithContext(context.TODO(), timeout, interval, func (ctx context.Context) bool {
+		return predicate() 
+	})
 }
 
-func WaitForPredicateWithContext(ctx context.Context, timeout time.Duration, interval time.Duration, predicate func() bool) error {
+func WaitForPredicateWithContext(ctx context.Context, timeout time.Duration, interval time.Duration, predicate func(context.Context) bool) error {
 	return WaitForPredicateWithTimer(ctx, timeout, interval, func(timer *time.Timer) bool {
-		return predicate()
+		return predicate(ctx)
 	})
 }
 
@@ -261,6 +263,10 @@ func SetNoProxyEnv(noProxy string) {
 
 func GenerateRequestContext() context.Context {
 	return requestid.ToContext(context.Background(), requestid.NewID())
+}
+
+func GenerateRequestContextFromContext(ctx context.Context) context.Context {
+	return requestid.ToContext(ctx, requestid.NewID())
 }
 
 func RequestIDLogger(ctx context.Context, log *logrus.Logger) logrus.FieldLogger {
