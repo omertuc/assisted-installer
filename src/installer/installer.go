@@ -761,6 +761,8 @@ func (i *installer) cleanupInstallDevice() error {
 		}
 
 		for _, device := range devices {
+			i.log.Infof("raid device (%s) - cleaning", device)
+
 			// Cleaning the raid device itself before removing membership.
 			err = i.cleanupDevice(device)
 
